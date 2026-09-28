@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}New job{% endblock %}
+{% block content %}
+<h1>New branding job</h1>
+<p class="sub">{{ '%.1f' % (usage.remaining / 60) }} render minutes left this month ·
+  {{ plan.name }} plan: up to {{ plan.max_files_per_job }} videos per job, {{ plan.resolution_label|lower }}, up to {{ plan.max_fps }} fps ·
+  <a href="{{ url_for('web.pricing') }}">compare plans</a></p>
+<form id="jobForm" class="grid g2" style="align-items:start" novalidate>
+  <div class="card">
+    <h2>1. Videos</h2>
+    <label class="drop" id="drop">
+      <input type="file" id="videos" accept="video/*,.mkv" multiple>
+      <b style="color:var(--text)">Choose videos</b> or drop them here<br><span class="small">MP4, MOV, MKV, WebM · only videos you own or are licensed to use</span>
+    </label>
+    <ul class="file-list" id="fileList"></ul>
+    <p class="muted small" id="estimate"></p>
+  </div>
+  <div class="card">
+    <h2>2. Brand kits</h2>
+    {% for k in kits %}
+      <label class="check"><input type="checkbox" name="kits" value="{{ k.id }}" {{ 'checked' if loop.first }}> <span>{{ k.name }}</span></label>
+    {% endfor %}
+    <h2 style="margin-top:18px">3. Formats</h2>
+    {% for key, f in FORMATS.items() %}
+      <label class="check"><input type="checkbox" name="formats" value="{{ key }}" {{ 'checked' if key == '9x16' }}> <span>{{ f[0] }}</span></label>
+    {% endfor %}
+    <h2 style="margin-top:18px">4. Quality</h2>
+    {% for key, q in QUALITIES.items() %}
+      {% set allowed = key in plan.qualities %}
+      <label class="check" {{ 'style=opacity:.55' if not allowed }}>
+        <input type="radio" name="quality" value="{{ key }}" {{ 'checked' if key == 'balanced' }} {{ 'disabled' if not allowed }}>
+        <span>{{ q[0] }}{% if not allowed %} — <a href="{{ url_for('web.pricing') }}">Agency plan and above</a>{% endif %}</span>
+      </label>
+    {% endfor %}
+    <p class="muted small">Outputs = videos × kits × formats. Your source frame rate is kept, up to {{ plan.max_fps }} fps.{% if plan.free_mark %} The Free plan renders up to 720p with a small “Made with BrandBatch” mark.{% endif %}</p>
+    <button class="btn block lg" id="go" type="submit" disabled>Start rendering</button>
+    <div class="flash error" id="err" role="alert" hidden style="margin-top:12px"></div>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const maxFiles = {{ plan.max_files_per_job }};
+  let files = [];
+  const durations = new Map();
+  function render(){
+    $('fileList').innerHTML = '';
+    files.forEach((f, i) => {
+      const li = document.createElement('li');
+      const name = document.createElement('span'); name.textContent = f.name;
+      const rm = document.createElement('a'); rm.href = '#'; rm.textContent = 'Remove';
+      rm.onclick = e => { e.preventDefault(); files.splice(i, 1); render(); };
+      li.append(name, rm); $('fileList').appendChild(li);
+    });
+    const kits = document.querySelectorAll('input[name=kits]:checked').length;
+    const fmts = document.querySelectorAll('input[name=formats]:checked').length;
+    const secs = files.reduce((a, f) => a + (durations.get(f) || 0), 0);
+    $('estimate').textContent = files.length ? `${files.length} video(s) → ${files.length * kits * fmts} output(s), about ${(secs * kits * fmts / 60).toFixed(1)} render minutes (plus intros/outros)` : '';
+    $('go').disabled = !(files.length && kits && fmts);
+  }
+  function measure(f){
+    const v = document.createElement('video'); v.preload = 'metadata';
+    v.onloadedmetadata = () => { durations.set(f, v.duration || 0); URL.revokeObjectURL(v.src); render(); };
+    v.onerror = () => URL.revokeObjectURL(v.src);
+    v.src = URL.createObjectURL(f);
+  }
+  function add(list){
+    const vids = [...list].filter(f => f.type.startsWith('video/') || /\.(mp4|mov|m4v|mkv|webm|avi)$/i.test(f.name));
+    for (const f of vids) { if (files.length >= maxFiles) { show(`Your plan allows ${maxFiles} videos per job.`); break; } files.push(f); measure(f); }
+    render();
+  }
+  function show(msg){ $('err').hidden = !msg; $('err').textContent = msg || ''; }
+  $('videos').addEventListener('change', e => { add(e.target.files); e.target.value = ''; });
+  const drop = $('drop');
+  ['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => add(e.dataTransfer.files));
+  $('jobForm').addEventListener('change', render);
+  $('jobForm').addEventListener('submit', e => {
+    e.preventDefault(); show('');
+    const fd = new FormData();
+    files.forEach(f => fd.append('videos', f));
+    document.querySelectorAll('input[name=kits]:checked').forEach(c => fd.append('kits', c.value));
+    document.querySelectorAll('input[name=formats]:checked').forEach(c => fd.append('formats', c.value));
+    const q = document.querySelector('input[name=quality]:checked');
+    fd.append('quality', q ? q.value : 'balanced');
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '{{ url_for("web.api_job_create") }}');
+    xhr.setRequestHeader('X-CSRF-Token', window.CSRF);
+    $('go').disabled = true;
+    xhr.upload.onprogress = ev => { if (ev.lengthComputable) $('go').textContent = `Uploading… ${Math.round(ev.loaded / ev.total * 100)}%`; };
+    xhr.onload = () => {
+      let body = {}; try { body = JSON.parse(xhr.responseText); } catch { body = {error: 'Server error (' + xhr.status + ')'}; }
+      if (xhr.status === 201) { $('go').textContent = 'Starting…'; location.href = body.url; return; }
+      show(body.error || 'Something went wrong.');
+      if (body.upgrade) { const a = document.createElement('a'); a.href = body.upgrade; a.textContent = ' See plans →'; $('err').appendChild(a); }
+      $('go').textContent = 'Start rendering'; render();
+    };
+    xhr.onerror = () => { show('Upload failed. Check your connection and try again.'); $('go').textContent = 'Start rendering'; render(); };
+    xhr.send(fd);
+  });
+  render();
+})();
+</script>
+{% endblock %}

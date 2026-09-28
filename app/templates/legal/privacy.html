@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy{% endblock %}
+{% block content %}
+<div class="prose">
+<h1>Privacy Policy</h1>
+<p class="muted">Template, to be reviewed for compliance with India's Digital Personal Data Protection Act before launch.</p>
+<h2>What we collect</h2>
+<ul><li>Account data: name, email, hashed password.</li><li>Files you upload: videos, logos, intro and outro clips.</li><li>Billing data handled by Razorpay. We store your subscription ID, never card or UPI details.</li><li>Basic technical logs such as IP address and error logs, kept for security.</li></ul>
+<h2>How we use it</h2>
+<p>Only to run the service: rendering your videos, enforcing plan limits, billing and support. We don't sell your data, and we don't use your videos to train models or for any other purpose.</p>
+<h2>Retention</h2>
+<p>Job uploads and outputs are deleted about 48 hours after the job is created. Brand kits stay until you delete them. Account data is deleted within 30 days of an account deletion request.</p>
+<h2>Your rights</h2>
+<p>You can request access to, correction of, or deletion of your data by emailing <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit brand kit' if kit else 'New brand kit' }}{% endblock %}
+{% set s = (kit.settings if kit else {}) %}
+{% macro val(name, default) -%}{{ form.get(name) if form.get(name) is not none else s.get(name, default) }}{%- endmacro %}
+{% block content %}
+<h1>{{ 'Edit “' ~ kit.name ~ '”' if kit else 'New brand kit' }}</h1>
+<p class="sub">One kit per client or brand. Changes apply to future jobs only.</p>
+<form method="post" enctype="multipart/form-data" id="kitForm">
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+<div class="grid g2" style="align-items:start">
+  <div class="card">
+    <label class="f" for="name">Kit name (client or brand)</label>
+    <input type="text" id="name" name="name" required maxlength="80" value="{{ form.get('name') or (kit.name if kit else '') }}">
+
+    <label class="f" for="logo">Logo: PNG/JPG/WebP (transparent PNG is best), or an animated video / GIF{{ ' (leave empty to keep current)' if kit }}</label>
+    <input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,video/*" {{ '' if kit else 'required' }}>
+
+    <label class="f">Position</label>
+    <div class="pos-grid" role="radiogroup" aria-label="Logo position">
+      {% for p in POSITIONS %}<label title="{{ p }}"><input type="radio" name="position" value="{{ p }}" {{ 'checked' if val('position','bottom-right') == p }} aria-label="{{ p }}"><span></span></label>{% endfor %}
+    </div>
+
+    <label class="f" for="scale">Logo width <output id="scaleOut"></output></label>
+    <input type="range" id="scale" name="scale" min="3" max="100" value="{{ val('scale', 22) }}">
+    <label class="f" for="margin">Margin <output id="marginOut"></output></label>
+    <input type="range" id="margin" name="margin" min="0" max="30" step="0.5" value="{{ val('margin', 3) }}">
+    <label class="f" for="opacity">Opacity <output id="opacityOut"></output></label>
+    <input type="range" id="opacity" name="opacity" min="5" max="100" value="{{ val('opacity', 100) }}">
+
+    <input type="hidden" name="chroma" value="0">
+    <label class="check"><input type="checkbox" id="chroma" name="chroma" value="1" {{ 'checked' if (('1' in form.getlist('chroma')) if form else s.get('chroma')) }}> <span>Remove a solid background (e.g. green screen) from the logo</span></label>
+    <div id="chromaOpts" class="grid g2">
+      <div><label class="f" for="chroma_color">Key color</label><input type="color" id="chroma_color" name="chroma_color" value="#{{ (form.get('chroma_color') or s.get('chroma_color','00ff00')).lstrip('#') }}" style="width:100%;height:38px;border:1px solid var(--line);border-radius:9px;background:none"></div>
+      <div><label class="f" for="similarity">Strength</label><input type="range" id="similarity" name="similarity" min="0.05" max="0.8" step="0.01" value="{{ val('similarity', 0.3) }}"></div>
+      <input type="hidden" name="blend" value="{{ val('blend', 0.08) }}">
+    </div>
+    <input type="hidden" name="loop_logo" value="0">
+    <label class="check"><input type="checkbox" name="loop_logo" value="1" {{ 'checked' if (('1' in form.getlist('loop_logo')) if form else s.get('loop_logo', True)) }}> <span>Loop an animated logo for the whole video</span></label>
+
+    <label class="f" for="intro">Intro clip (optional, up to 30 s){% if kit and kit.intro_file %}: <span class="chip">current intro saved</span>{% endif %}</label>
+    <input type="file" id="intro" name="intro" accept="video/*">
+    {% if kit and kit.intro_file %}<label class="check"><input type="checkbox" name="remove_intro" value="1"> <span>Remove current intro</span></label>{% endif %}
+    <label class="f" for="outro">Outro clip (optional, up to 30 s){% if kit and kit.outro_file %}: <span class="chip">current outro saved</span>{% endif %}</label>
+    <input type="file" id="outro" name="outro" accept="video/*">
+    {% if kit and kit.outro_file %}<label class="check"><input type="checkbox" name="remove_outro" value="1"> <span>Remove current outro</span></label>{% endif %}
+
+    <div class="row" style="margin-top:20px">
+      <button class="btn" type="submit">Save brand kit</button>
+      <a class="btn ghost" href="{{ url_for('web.kits') }}">Cancel</a>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Preview (9:16)</h2>
+    <div class="preview" id="preview" style="max-width:300px">
+      <div id="pvLogoWrap"></div>
+    </div>
+    <p class="muted small" style="margin-top:10px">Placement preview. Background removal and intros/outros are applied during rendering.</p>
+  </div>
+</div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const form = $('kitForm');
+  const pv = $('preview');
+  let el = null;
+  const existing = {{ (url_for('web.kit_asset', kit_id=kit.id, field='logo') if kit and kit.logo_file else '')|tojson }};
+  const existingIsVideo = {{ ((kit.logo_file.rsplit('.',1)[-1] not in ['png','jpg','jpeg','webp']) if kit and kit.logo_file else false)|tojson }};
+  function setLogo(src, isVideo){
+    $('pvLogoWrap').innerHTML = '';
+    el = document.createElement(isVideo ? 'video' : 'img');
+    if (isVideo) { el.muted = true; el.loop = true; el.autoplay = true; el.playsInline = true; }
+    el.src = src; el.alt = '';
+    el.addEventListener(isVideo ? 'loadeddata' : 'load', layout);
+    $('pvLogoWrap').appendChild(el);
+  }
+  function layout(){
+    ['scale','margin','opacity'].forEach(k => { const o = $(k+'Out'); if (o) o.textContent = $(k).value + '%'; });
+    $('chromaOpts').style.display = $('chroma').checked ? '' : 'none';
+    if (!el) return;
+    const W = pv.clientWidth, H = pv.clientHeight;
+    const nw = el.naturalWidth || el.videoWidth, nh = el.naturalHeight || el.videoHeight;
+    if (!nw) return;
+    const w = W * $('scale').value / 100, h = w * nh / nw, m = W * $('margin').value / 100;
+    const pos = (form.querySelector('input[name=position]:checked') || {}).value || 'bottom-right';
+    const [v, hz] = pos === 'center' ? ['middle','center'] : pos.split('-');
+    el.style.width = w + 'px'; el.style.height = h + 'px';
+    el.style.left = (hz === 'left' ? m : hz === 'right' ? W - w - m : (W - w) / 2) + 'px';
+    el.style.top = (v === 'top' ? m : v === 'bottom' ? H - h - m : (H - h) / 2) + 'px';
+    el.style.opacity = $('opacity').value / 100;
+  }
+  form.addEventListener('input', layout);
+  form.addEventListener('change', layout);
+  window.addEventListener('resize', layout);
+  $('logo').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    setLogo(URL.createObjectURL(f), f.type.startsWith('video/'));
+  });
+  if (existing) setLogo(existing, existingIsVideo);
+  layout();
+})();
+</script>
+{% endblock %}

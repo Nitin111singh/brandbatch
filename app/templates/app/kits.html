@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Brand kits{% endblock %}
+{% block content %}
+<div class="spread" style="margin-bottom:18px">
+  <div><h1>Brand kits</h1><p class="sub" style="margin:0">{{ kits|length }} of {{ plan.brand_kits }} on the {{ plan.name }} plan</p></div>
+  {% if kits|length < plan.brand_kits %}<a class="btn" href="{{ url_for('web.kit_new') }}">New brand kit</a>{% else %}<a class="btn ghost" href="{{ url_for('web.billing_page') }}">Upgrade for more kits</a>{% endif %}
+</div>
+<div class="card">
+{% if kits %}
+  <div class="table-wrap"><table class="t">
+    <thead><tr><th>Logo</th><th>Name</th><th>Position</th><th>Intro / outro</th><th></th></tr></thead>
+    <tbody>
+    {% for k in kits %}
+    <tr>
+      <td>{% if k.logo_file and k.logo_file.rsplit('.',1)[-1] in ['png','jpg','jpeg','webp'] %}<img class="kit-thumb" src="{{ url_for('web.kit_asset', kit_id=k.id, field='logo') }}" alt="">{% else %}<span class="chip">video logo</span>{% endif %}</td>
+      <td><b>{{ k.name }}</b></td>
+      <td class="muted">{{ k.settings.get('position','bottom-right') }} · {{ k.settings.get('scale',22)|int }}%</td>
+      <td class="muted">{{ 'Intro' if k.intro_file else '—' }} / {{ 'Outro' if k.outro_file else '—' }}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <a class="btn ghost" href="{{ url_for('web.kit_edit', kit_id=k.id) }}">Edit</a>
+        <form method="post" action="{{ url_for('web.kit_delete', kit_id=k.id) }}" style="display:inline" data-msg="Delete brand kit “{{ k.name }}”?" onsubmit="return confirm(this.dataset.msg)">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn danger" type="submit">Delete</button></form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+{% else %}
+  <div class="empty">No brand kits yet. <a href="{{ url_for('web.kit_new') }}">Create your first one</a>.</div>
+{% endif %}
+</div>
+{% endblock %}

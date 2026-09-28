@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Billing{% endblock %}
+{% block scripts %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+(() => {
+  const err = document.getElementById('topupErr');
+  const ok = document.getElementById('topupOk');
+  const show = (el, msg) => { el.hidden = !msg; el.textContent = msg || ''; };
+  const post = (url, body) => fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRF-Token': window.CSRF},
+    body: JSON.stringify(body || {}),
+  }).then(async r => ({status: r.status, data: await r.json().catch(() => ({}))}));
+
+  document.querySelectorAll('.topup-btn').forEach(btn => btn.addEventListener('click', async () => {
+    show(err, ''); show(ok, '');
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = 'Starting…';
+    let order;
+    try {
+      const res = await post('{{ url_for("web.create_order") }}', {pack: btn.dataset.pack});
+      if (res.status !== 201) { show(err, res.data.error || 'Could not start the payment.'); return; }
+      order = res.data;
+    } catch (e) {
+      show(err, 'Network error. Check your connection and try again.');
+      return;
+    } finally {
+      btn.disabled = false; btn.textContent = label;
+    }
+
+    if (!window.Razorpay) { show(err, 'Could not load Razorpay. Disable your ad blocker and reload.'); return; }
+    const rzp = new window.Razorpay({
+      key: order.key_id,
+      order_id: order.order_id,
+      amount: order.amount,
+      currency: order.currency,
+      name: 'BrandBatch',
+      description: order.minutes + ' render minutes',
+      prefill: {email: {{ current_user.email|tojson }}, name: {{ current_user.name|tojson }}},
+      theme: {color: '#5b3df5'},
+      modal: {ondismiss: () => show(err, 'Payment cancelled. Nothing was charged.')},
+      handler: async resp => {
+        show(err, ''); show(ok, 'Verifying payment…');
+        const res = await post('{{ url_for("web.verify_payment") }}', resp);
+        if (res.status === 200 && res.data.ok) {
+          show(ok, `Payment successful. ${res.data.minutes} minutes added.`);
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          show(ok, '');
+          show(err, res.data.error || 'We could not verify this payment. Contact support with your payment id.');
+        }
+      },
+    });
+    rzp.on('payment.failed', resp => {
+      const d = (resp && resp.error) || {};
+      show(err, 'Payment failed' + (d.description ? ': ' + d.description : '') + '. Nothing was charged.');
+    });
+    rzp.open();
+  }));
+})();
+</script>
+{% endblock %}
+{% block content %}
+<h1>Billing</h1>
+<p class="sub">You're on the <b>{{ plan.name }}</b> plan{% if current_user.plan_status == 'cancelling' %}, which ends at the close of this billing period{% elif current_user.plan_status == 'payment_issue' %}. <span style="color:var(--err)">Your last payment failed. Update your payment method in the Razorpay email.</span>{% endif %}.
+  {{ '%.1f' % (usage.used / 60) }} of {{ (usage.limit / 60)|int }} render minutes used this month.</p>
+{% if not billing_ready %}
+  <div class="flash error">Online payments aren't configured on this server: <code>RAZORPAY_KEY_ID</code> and
+    <code>RAZORPAY_KEY_SECRET</code> aren't set in the environment the server is running in. Check your
+    <code>.env</code> file and restart, or run <code>python scripts/check_razorpay.py</code>.
+    Customers should email <a href="mailto:{{ support_email }}">{{ support_email }}</a> to upgrade.</div>
+{% endif %}
+{% with cta_mode='app' %}{% include "_pricing_cards.html" %}{% endwith %}
+
+<h2 style="font-size:20px;margin:30px 0 12px">What each plan includes</h2>
+{% include "_plan_table.html" %}
+<h2 style="font-size:20px;margin:30px 0 12px">Need more minutes this month?</h2>
+<p class="muted small" style="margin-top:-6px">One-time top-ups are added to your current month's balance and expire when the month ends. Paid by card, UPI or net banking.</p>
+<div class="grid g3" id="topups">
+  {% for pack in TOPUP_PACKS.values() %}
+  <div class="card price">
+    <h2 style="margin-bottom:2px">+{{ "{:,}".format(pack.minutes) }} minutes</h2>
+    <div class="amount" style="margin-top:8px">₹{{ "{:,}".format(pack.price_inr) }}</div>
+    <div class="muted small">₹{{ "%.2f"|format(pack.price_inr / pack.minutes) }} per minute</div>
+    <button class="btn block topup-btn" data-pack="{{ pack.key }}" style="margin-top:14px"
+            {{ 'disabled' if not billing_ready }}>Buy minutes</button>
+  </div>
+  {% endfor %}
+</div>
+<div class="flash error" id="topupErr" role="alert" hidden style="margin-top:12px"></div>
+<div class="flash ok" id="topupOk" role="alert" hidden style="margin-top:12px"></div>
+
+{% if current_user.razorpay_subscription_id and current_user.plan_status == 'active' %}
+<div class="card" style="margin-top:20px">
+  <h2>Cancel subscription</h2>
+  <p class="muted">You keep your plan until the end of the current billing period, then move to Free.</p>
+  <form method="post" action="{{ url_for('web.billing_cancel') }}" onsubmit="return confirm('Cancel your subscription at the end of this billing period?')">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn danger" type="submit">Cancel subscription</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

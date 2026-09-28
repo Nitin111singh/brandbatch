@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="auth card">
+  <h1>Log in</h1>
+  <form method="post" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label class="f" for="email">Email</label>
+    <input type="email" id="email" name="email" required value="{{ form.get('email','') }}" autocomplete="email">
+    <label class="f" for="password">Password</label>
+    <input type="password" id="password" name="password" required autocomplete="current-password">
+    <button class="btn block" type="submit" style="margin-top:16px">Log in</button>
+  </form>
+  <p class="muted small" style="margin-top:14px">New here? <a href="{{ url_for('web.signup') }}">Create a free account</a> · Forgot your password? Email <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+</div>
+{% endblock %}

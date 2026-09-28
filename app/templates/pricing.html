@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Pricing{% endblock %}
+{% block content %}
+<h1>Pricing</h1>
+<p class="sub">Start free. Upgrade when you're branding videos for real clients. Cancel anytime.</p>
+{% with cta_mode='public' %}{% include "_pricing_cards.html" %}{% endwith %}
+
+<h2 style="font-size:22px;margin:34px 0 12px">Compare every detail</h2>
+{% include "_plan_table.html" %}
+<div class="grid g2" style="margin-top:28px">
+  <div class="card"><h2>What's a render minute?</h2><p class="muted" style="margin:0">The length of each finished video. A 30-second reel branded for 2 clients in 2 formats uses 2 minutes.</p></div>
+  <div class="card"><h2>Need more?</h2><p class="muted" style="margin:0">Franchise networks and large agencies can get custom limits. Email <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p></div>
+</div>
+{% endblock %}

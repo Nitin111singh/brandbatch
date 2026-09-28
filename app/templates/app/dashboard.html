@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="spread" style="margin-bottom:18px">
+  <div><h1>Hi{{ ' ' ~ current_user.name if current_user.name }}</h1><p class="sub" style="margin:0">{{ plan.name }} plan{% if current_user.plan_status != 'active' %} · <span class="status failed">{{ current_user.plan_status.replace('_',' ') }}</span>{% endif %}</p></div>
+  <a class="btn lg" href="{{ url_for('web.job_new') }}">New branding job</a>
+</div>
+
+{% set used_pct = ((usage.used + usage.reserved) / usage.limit * 100) if usage.limit else 100 %}
+<div class="grid g4" style="margin-bottom:18px">
+  <div class="card stat">
+    <span class="muted small">Render minutes this month</span>
+    <b>{{ '%.1f' % (usage.used / 60) }} <span class="muted small" style="font-weight:400">/ {{ (usage.limit / 60)|int }}</span></b>
+    <div class="meter" aria-label="Usage"><i style="width:{{ [used_pct,100]|min }}%"></i></div>
+    {% if usage.reserved %}<div class="muted small" style="margin-top:6px">{{ '%.1f' % (usage.reserved / 60) }} min reserved by running jobs</div>{% endif %}
+  </div>
+  <div class="card stat"><span class="muted small">Brand kits</span><b>{{ kits|length }} <span class="muted small" style="font-weight:400">/ {{ plan.brand_kits }}</span></b><a class="small" href="{{ url_for('web.kits') }}">Manage kits →</a></div>
+  <div class="card stat"><span class="muted small">Your {{ plan.name }} limits</span>
+    <b style="font-size:15px;margin:4px 0;line-height:1.5">{{ plan.max_files_per_job }} videos / job · {{ plan.resolution_label|lower }} · up to {{ plan.max_fps }} fps<br>{{ plan.quality_label }} quality{{ ' · “Made with” mark' if plan.free_mark }}</b>
+    <a class="small" href="{{ url_for('web.pricing') }}">Compare plans →</a></div>
+  <div class="card stat"><span class="muted small">Need more?</span><b style="font-size:17px;margin:4px 0">{{ 'Upgrade your plan' if plan.key != 'agency_pro' else 'Contact us for custom limits' }}</b><a class="small" href="{{ url_for('web.billing_page') }}">Billing →</a></div>
+</div>
+
+<div class="card">
+  <div class="spread"><h2 style="margin:0">Recent jobs</h2><a class="small" href="{{ url_for('web.jobs') }}">All jobs →</a></div>
+  {% if jobs %}
+  <div class="table-wrap"><table class="t">
+    <thead><tr><th>Created</th><th>Videos</th><th>Outputs</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for j in jobs %}
+      <tr><td>{{ j.created_at.strftime('%d %b %Y, %H:%M') }} UTC</td><td>{{ j.inputs|length }}</td><td>{{ j.renders|length }}</td>
+      <td><span class="status {{ j.status }}">{{ j.status }}</span></td><td><a href="{{ url_for('web.job_detail', job_id=j.id) }}">Open</a></td></tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% else %}
+    <div class="empty">No jobs yet. {% if kits %}<a href="{{ url_for('web.job_new') }}">Start your first batch</a>{% else %}<a href="{{ url_for('web.kit_new') }}">Create a brand kit</a> first{% endif %}.</div>
+  {% endif %}
+</div>
+{% endblock %}

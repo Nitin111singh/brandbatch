@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Job{% endblock %}
+{% block content %}
+<div class="spread" style="margin-bottom:16px">
+  <div>
+    <h1>Job <span class="muted" style="font-weight:400">#{{ job.id[:8] }}</span></h1>
+    <p class="sub" style="margin:0">{{ job.inputs|length }} video(s) · {{ job.renders|length }} output(s) · files deleted {{ job.expires_at.strftime('%d %b %Y, %H:%M') }} UTC</p>
+  </div>
+  <div class="row">
+    <span class="status" id="jobStatus"></span>
+    <button class="btn ghost" id="cancelBtn" hidden>Cancel</button>
+    <a class="btn" id="zipBtn" href="{{ url_for('web.job_zip', job_id=job.id) }}" hidden>Download all (.zip)</a>
+  </div>
+</div>
+<div class="card">
+  <div class="table-wrap"><table class="t">
+    <thead><tr><th>Output</th><th>Brand kit</th><th>Format</th><th>Quality</th><th style="width:28%">Status</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const FORMATS = {{ FORMATS|tojson }};
+  const QUALITIES = {{ QUALITIES|tojson }};
+  let data = {{ data|tojson }};
+  const fmtSize = b => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+  function cell(text){ const td = document.createElement('td'); td.textContent = text; return td; }
+  function draw(){
+    $('jobStatus').textContent = data.status; $('jobStatus').className = 'status ' + data.status;
+    const live = data.status === 'queued' || data.status === 'running';
+    $('cancelBtn').hidden = !live;
+    $('zipBtn').hidden = live || !data.renders.some(r => r.download);
+    const tb = $('rows'); tb.innerHTML = '';
+    data.renders.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.append(cell(r.name), cell(r.kit), cell((FORMATS[r.format] || [r.format])[0]),
+                cell((QUALITIES[r.quality] || [r.quality || 'Balanced'])[0].split(' (')[0]));
+      const st = document.createElement('td');
+      const label = {queued: 'Queued', running: `Rendering ${Math.round(r.progress)}%`, done: `Done · ${fmtSize(r.size)}`, failed: 'Failed', cancelled: 'Cancelled'}[r.status] || r.status;
+      st.innerHTML = `<span class="status ${r.status}"></span><div class="bar"><i style="width:${r.status === 'done' ? 100 : r.progress}%"></i></div>`;
+      st.querySelector('.status').textContent = label;
+      if (r.error && r.status === 'failed') { const e = document.createElement('div'); e.className = 'small'; e.style.color = 'var(--err)'; e.textContent = r.error.slice(-200); st.appendChild(e); }
+      const act = document.createElement('td'); act.style.whiteSpace = 'nowrap';
+      if (r.download) {
+        const a = document.createElement('a'); a.href = r.download; a.textContent = 'Download';
+        const p = document.createElement('a'); p.href = r.download + '?inline=1'; p.target = '_blank'; p.rel = 'noopener'; p.textContent = 'Preview';
+        act.append(a, document.createTextNode(' · '), p);
+      }
+      tr.append(st, act); tb.appendChild(tr);
+    });
+  }
+  async function poll(){
+    try {
+      const res = await fetch('{{ url_for("web.api_job", job_id=job.id) }}', {headers: {'Accept': 'application/json'}});
+      if (res.ok) { data = await res.json(); draw(); }
+    } catch (e) {}
+    if (data.status === 'queued' || data.status === 'running') setTimeout(poll, 1500);
+  }
+  $('cancelBtn').onclick = async () => {
+    $('cancelBtn').disabled = true;
+    const res = await fetch('{{ url_for("web.api_job_cancel", job_id=job.id) }}', {method: 'POST', headers: {'X-CSRF-Token': window.CSRF}});
+    if (res.ok) data = await res.json();
+    draw(); poll();
+  };
+  draw(); poll();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service{% endblock %}
+{% block content %}
+<div class="prose">
+<h1>Terms of Service</h1>
+<p class="muted">Template, to be reviewed by a lawyer before launch.</p>
+<h2>1. The service</h2>
+<p>BrandBatch lets you add logos, intros and outros to videos and export them in different formats. You create an account, upload videos, and download the results.</p>
+<h2>2. Your content</h2>
+<p>You keep all rights to what you upload. You confirm that you own every video, logo and clip you upload, or have permission from the owner to edit and publish it. You give BrandBatch only the limited permission needed to store and process your files to provide the service.</p>
+<h2>3. Acceptable use</h2>
+<p>You must follow our <a href="{{ url_for('web.content_policy') }}">Content Policy</a>. We may suspend or close accounts that infringe others' rights, promote prohibited products, or abuse the service. Repeat infringers are terminated.</p>
+<h2>4. Plans, billing and cancellation</h2>
+<p>Paid plans renew monthly through Razorpay until cancelled. Cancellations take effect at the end of the current billing period. Unused render minutes don't roll over. Refunds are handled case by case; contact <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+<h2>5. Storage and retention</h2>
+<p>Uploaded videos and rendered outputs are deleted automatically about 48 hours after a job is created. Download what you need before then. Brand kit assets are kept until you delete the kit or your account.</p>
+<h2>6. Availability and liability</h2>
+<p>We work to keep the service reliable but provide it "as is". To the extent the law allows, our total liability is limited to the amount you paid in the three months before a claim.</p>
+<h2>7. Changes</h2>
+<p>We may update these terms and will notify you by email about material changes.</p>
+</div>
+{% endblock %}

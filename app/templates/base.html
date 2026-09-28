@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>{% block title %}BrandBatch{% endblock %} · BrandBatch</title>
+<meta name="description" content="Brand every video for every client in one go: logo, intro, outro and every format.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%235b3df5'/><path d='M9 8h9a5 5 0 0 1 1.5 9.8A5 5 0 0 1 18 27H9z' fill='white'/></svg>">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="{{ url_for('web.dashboard') if current_user else url_for('web.landing') }}">Brand<span>Batch</span></a>
+    <nav class="links">
+      {% if current_user %}
+        {% set ep = request.endpoint or '' %}
+        <a href="{{ url_for('web.dashboard') }}" class="{{ 'active' if ep == 'web.dashboard' }}">Dashboard</a>
+        <a href="{{ url_for('web.job_new') }}" class="{{ 'active' if ep == 'web.job_new' }}">New job</a>
+        <a href="{{ url_for('web.jobs') }}" class="{{ 'active' if ep in ('web.jobs','web.job_detail') }}">Jobs</a>
+        <a href="{{ url_for('web.kits') }}" class="{{ 'active' if ep.startswith('web.kit') }}">Brand kits</a>
+        <a href="{{ url_for('web.billing_page') }}" class="{{ 'active' if ep == 'web.billing_page' }}">Billing</a>
+        <a href="{{ url_for('web.account') }}" class="{{ 'active' if ep == 'web.account' }}">Account</a>
+        <form method="post" action="{{ url_for('web.logout') }}" style="margin:0"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button type="submit">Log out</button></form>
+      {% else %}
+        <a href="{{ url_for('web.pricing') }}">Pricing</a>
+        <a href="{{ url_for('web.login') }}">Log in</a>
+        <a class="btn" href="{{ url_for('web.signup') }}">Start free</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="wrap">
+    {% if current_user and not current_user.email_verified_at %}
+      <div class="flash error" role="alert">
+        Confirm your email address ({{ current_user.email }}) to start rendering.
+        <form method="post" action="{{ url_for('web.resend_verification') }}" style="display:inline">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn ghost" style="padding:4px 10px;margin-left:8px" type="submit">Resend link</button>
+        </form>
+      </div>
+    {% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}<div class="flash {{ cat }}" role="alert">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+<footer>
+  <div class="wrap">
+    <span>© BrandBatch</span>
+    <a href="{{ url_for('web.pricing') }}">Pricing</a>
+    <a href="{{ url_for('web.terms') }}">Terms</a>
+    <a href="{{ url_for('web.privacy') }}">Privacy</a>
+    <a href="{{ url_for('web.content_policy') }}">Content policy</a>
+    <a href="{{ url_for('web.report') }}">Report content</a>
+    <a href="mailto:{{ support_email }}">Support</a>
+  </div>
+</footer>
+<script>
+window.CSRF = document.querySelector('meta[name=csrf-token]').content;
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

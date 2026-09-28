@@ -1,0 +1,26 @@
+<div class="grid g4">
+  {% for p in PLANS.values() %}
+  <div class="card price {{ 'featured' if p.key == 'agency' }}">
+    {% if p.key == 'agency' %}<span class="tag">Most popular</span>{% endif %}
+    <h2 style="margin-bottom:2px">{{ p.name }}</h2>
+    <div class="muted small">{{ p.blurb }}</div>
+    <div class="amount" style="margin-top:12px">₹{{ "{:,}".format(p.price_inr) }}<span class="muted small" style="font-weight:400">/month</span></div>
+    <ul>{% for f in p.highlights %}<li>{{ f }}</li>{% endfor %}</ul>
+    {% if cta_mode == 'app' %}
+      {% if current_user.plan == p.key %}
+        <button class="btn ghost block" disabled>Current plan</button>
+      {% elif p.price_inr > 0 %}
+        <form method="post" action="{{ url_for('web.billing_subscribe', plan_key=p.key) }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn block" type="submit" {{ 'disabled' if not billing_ready }}>Choose {{ p.name }}</button>
+        </form>
+      {% else %}
+        <button class="btn ghost block" disabled>Free forever</button>
+      {% endif %}
+    {% else %}
+      <a class="btn {{ '' if p.key == 'agency' else 'ghost' }} block" href="{{ url_for('web.signup') }}">{{ 'Start free' if p.price_inr == 0 else 'Start with ' ~ p.name }}</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+<p class="muted small" style="margin-top:12px">Prices in INR per month. Render minutes = length of finished videos. Files are deleted automatically after 48 hours.</p>

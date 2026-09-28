@@ -1,0 +1,34 @@
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="table-wrap">
+    <table class="t plan-table">
+      <thead>
+        <tr>
+          <th style="min-width:210px">What you get</th>
+          {% for p in PLANS.values() %}
+            <th class="{{ 'featured-col' if p.key == 'agency' }}">
+              {{ p.name }}<div class="muted" style="font-weight:400;text-transform:none;letter-spacing:0">
+                {{ 'Free' if not p.price_inr else '₹{:,}/mo'.format(p.price_inr) }}</div>
+              {% if current_user and current_user.plan == p.key %}<span class="chip" style="margin-top:4px">Your plan</span>{% endif %}
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for label, help, values in comparison_rows() %}
+        <tr>
+          <th scope="row" style="text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">
+            {{ label }}{% if help %}<div class="muted small" style="font-weight:400">{{ help }}</div>{% endif %}
+          </th>
+          {% for key in PLANS %}
+            <td class="{{ 'featured-col' if key == 'agency' }}">{{ values[key] }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<p class="muted small" style="margin-top:10px">
+  Render minutes are counted on finished videos: one 30-second reel branded for 2 clients in 2 formats uses 2 minutes.
+  Every plan keeps your source frame rate up to its limit, and never upscales beyond the source resolution.
+</p>

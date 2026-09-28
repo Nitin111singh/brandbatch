@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Error {{ code }}{% endblock %}
+{% block content %}
+<div class="auth card" style="text-align:center">
+  <h1>{{ code }}</h1>
+  <p class="sub">{{ message }}</p>
+  <a class="btn" href="{{ url_for('web.dashboard') if current_user else url_for('web.landing') }}">Go home</a>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Account{% endblock %}
+{% block content %}
+<h1>Account</h1>
+<p class="sub">{{ current_user.email }} · member since {{ current_user.created_at.strftime('%d %b %Y') }}</p>
+<div class="card" style="max-width:460px">
+  <h2>Change password</h2>
+  <form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label class="f" for="current">Current password</label>
+    <input type="password" id="current" name="current" required autocomplete="current-password">
+    <label class="f" for="new">New password (8+ characters)</label>
+    <input type="password" id="new" name="new" required minlength="8" autocomplete="new-password">
+    <button class="btn" type="submit" style="margin-top:14px">Update password</button>
+  </form>
+</div>
+<p class="muted small" style="margin-top:16px">To delete your account and all data, email <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+{% endblock %}

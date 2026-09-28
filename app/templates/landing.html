@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Brand every client video in one go{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="chip">For social media agencies & brand teams</span>
+  <h1 style="margin-top:14px">Brand 100 client videos in 5 minutes</h1>
+  <p>Save a brand kit per client (logo, intro, outro), drop in a batch of videos and download every one branded and resized for Reels, Shorts, square and YouTube.</p>
+  <div class="row" style="justify-content:center">
+    <a class="btn lg" href="{{ url_for('web.signup') }}">Start free, no card needed</a>
+    <a class="btn ghost lg" href="{{ url_for('web.pricing') }}">See pricing</a>
+  </div>
+</section>
+
+<section class="grid g3 steps" style="margin:20px 0 36px">
+  <div class="card"><b>1</b><h2>Save brand kits</h2><p class="muted">Logo or animated green-screen logo, position, size, opacity, intro and outro, saved once per client.</p></div>
+  <div class="card"><b>2</b><h2>Drop a batch</h2><p class="muted">Upload up to 100 videos, pick one or many brand kits and the formats you need.</p></div>
+  <div class="card"><b>3</b><h2>Download everything</h2><p class="muted">Every video × brand × format rendered in the cloud. Grab them one by one or as a ZIP.</p></div>
+</section>
+
+<section class="grid g2" style="margin-bottom:36px">
+  <div class="card">
+    <h2>Built for teams publishing a lot</h2>
+    <ul class="muted" style="padding-left:18px;margin:0">
+      <li>Multi-brand jobs: one upload, branded for every client</li>
+      <li>Auto-reframe with blur fill: 9:16, 1:1, 16:9</li>
+      <li>Green-screen logo removal for animated logos</li>
+      <li>Intro and outro clips stitched automatically</li>
+      <li>Priced per brand kit, not per seat, in INR with UPI</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Your content stays yours</h2>
+    <p class="muted" style="margin:0">Uploads are private to your account and deleted 48 hours after rendering. We never use your videos for anything else. BrandBatch is for content you own or are licensed to use. See our <a href="{{ url_for('web.content_policy') }}">content policy</a>.</p>
+  </div>
+</section>
+
+<section id="pricing">
+  <h2 style="font-size:24px">Simple pricing</h2>
+  {% with cta_mode='public' %}{% include "_pricing_cards.html" %}{% endwith %}
+  <p style="margin-top:14px"><a href="{{ url_for('web.pricing') }}">See the full plan comparison →</a></p>
+</section>
+{% endblock %}

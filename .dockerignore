@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+storage
+*.db
+*.db-wal
+*.db-shm
+.env
+tests/.media
+.pytest_cache
+.secret_key

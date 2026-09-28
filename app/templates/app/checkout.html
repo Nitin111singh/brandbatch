@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Checkout{% endblock %}
+{% block content %}
+<div class="auth card" style="text-align:center">
+  <h1>{{ plan.name }} plan</h1>
+  <p class="sub">₹{{ "{:,}".format(plan.price_inr) }}/month · UPI autopay or card via Razorpay</p>
+  <button class="btn block lg" id="pay">Pay with Razorpay</button>
+  <p class="muted small" style="margin-top:12px"><a href="{{ url_for('web.billing_page') }}">Back to billing</a></p>
+  <form method="post" action="{{ url_for('web.billing_verify') }}" id="verify">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="razorpay_payment_id">
+    <input type="hidden" name="razorpay_subscription_id">
+    <input type="hidden" name="razorpay_signature">
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+(() => {
+  const opts = {
+    key: {{ key_id|tojson }},
+    subscription_id: {{ subscription_id|tojson }},
+    name: 'BrandBatch',
+    description: {{ (plan.name ~ ' plan')|tojson }},
+    prefill: {email: {{ current_user.email|tojson }}, name: {{ current_user.name|tojson }}},
+    theme: {color: '#5b3df5'},
+    handler: resp => {
+      const f = document.getElementById('verify');
+      ['razorpay_payment_id', 'razorpay_subscription_id', 'razorpay_signature'].forEach(k => f.elements[k].value = resp[k]);
+      f.submit();
+    },
+  };
+  document.getElementById('pay').onclick = () => {
+    if (!window.Razorpay) { alert('Could not load Razorpay. Check your connection or ad blocker.'); return; }
+    new Razorpay(opts).open();
+  };
+})();
+</script>
+{% endblock %}

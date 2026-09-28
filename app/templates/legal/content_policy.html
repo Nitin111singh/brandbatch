@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Content Policy{% endblock %}
+{% block content %}
+<div class="prose">
+<h1>Content Policy</h1>
+<p>BrandBatch is for branding content you own or are licensed to use.</p>
+<h2>Not allowed</h2>
+<ul>
+  <li><b>Reposting others' content:</b> downloading or reusing other creators' videos without permission and adding your branding to them.</li>
+  <li><b>Gambling and betting promotion:</b> casinos, betting, satta, real-money gaming and similar brands. Brand kits for these are blocked.</li>
+  <li><b>Illegal or harmful content:</b> content that is sexually explicit, exploits minors, promotes violence or hate, or is fraudulent, including fake endorsements and scams.</li>
+  <li><b>Impersonation:</b> using another company's or person's brand without authorization.</li>
+</ul>
+<h2>Enforcement</h2>
+<p>We act on reports and may remove content, suspend accounts or terminate repeat violators. Report issues through <a href="{{ url_for('web.report') }}">our report form</a>.</p>
+</div>
+{% endblock %}
