@@ -76,7 +76,10 @@ If the Razorpay variables are empty, the app runs normally and the billing page 
 
 ## Email and anti-abuse
 
-Confirmation links are sent over SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`).
+Confirmation links are sent either over an HTTPS API (`MAIL_FROM` + `BREVO_API_KEY`) or over SMTP
+(`MAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`). The API path is preferred: many
+hosts, including Railway on its Free/Trial/Hobby plans, block outbound SMTP ports. Check either with
+`python scripts/check_email.py you@example.com`.
 Any transactional provider works: Brevo, Resend, Amazon SES, Zoho, Gmail with an app password. **Without SMTP
 the app still runs and writes the link into the server log**, and you can confirm accounts by hand with
 `python manage.py verify-user someone@example.com`.

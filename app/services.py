@@ -374,7 +374,10 @@ def process_render(render_id: str):
             db.refresh(r)
             cancelled = str(exc) == "Cancelled"
             r.status = "cancelled" if cancelled else "failed"
-            r.error = "Cancelled" if cancelled else str(exc)[-800:]
+            r.error = "Cancelled" if cancelled else str(exc)[-1800:]
+            if not cancelled:
+                log.error("render %s failed (job %s, %s/%s): %s",
+                          render_id, job.id, r.fmt, r.quality, str(exc).replace("\n", " | "))
             r.estimated_seconds = 0
             delete_rel(out_rel)
         finally:

@@ -42,7 +42,7 @@
       const label = {queued: 'Queued', running: `Rendering ${Math.round(r.progress)}%`, done: `Done · ${fmtSize(r.size)}`, failed: 'Failed', cancelled: 'Cancelled'}[r.status] || r.status;
       st.innerHTML = `<span class="status ${r.status}"></span><div class="bar"><i style="width:${r.status === 'done' ? 100 : r.progress}%"></i></div>`;
       st.querySelector('.status').textContent = label;
-      if (r.error && r.status === 'failed') { const e = document.createElement('div'); e.className = 'small'; e.style.color = 'var(--err)'; e.textContent = r.error.slice(-200); st.appendChild(e); }
+      if (r.error && r.status === 'failed') { const e = document.createElement('div'); e.className = 'small'; e.style.color = 'var(--err)'; e.textContent = r.error.slice(0, 400); st.appendChild(e); }
       const act = document.createElement('td'); act.style.whiteSpace = 'nowrap';
       if (r.download) {
         const a = document.createElement('a'); a.href = r.download; a.textContent = 'Download';

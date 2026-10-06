@@ -294,6 +294,40 @@ def build_command(spec: RenderSpec) -> tuple[list[str], float]:
     return cmd, total
 
 
+# stderr lines that say what went wrong, as opposed to ffmpeg's banner and config dump
+_ERROR_LINE = re.compile(
+    r"(error|invalid|unable|failed|not found|no such file|permission denied|"
+    r"no space left|cannot |unsupported|killed|out of memory|conversion failed|"
+    r"does not contain|at least one output|buffer underflow|too many)", re.I)
+
+_SIGNALS = {4: "SIGILL", 6: "SIGABRT", 8: "SIGFPE", 9: "SIGKILL", 11: "SIGSEGV", 15: "SIGTERM"}
+
+
+def _failure_message(code: int | None, tail: list[str], out: Path) -> str:
+    """Explain a failed run. Always names the exit code: when ffmpeg is killed it prints
+    no error at all, and the code is then the only evidence of what happened."""
+    parts = [f"ffmpeg exited with code {code}"]
+    if code is not None and code < 0:
+        sig = -code
+        note = f"killed by signal {sig} ({_SIGNALS.get(sig, 'unknown')})"
+        if sig == 9:
+            note += " - this is almost always the kernel OOM killer, i.e. the container ran out of memory"
+        parts.append(note)
+    if code == 0:
+        parts.append("ffmpeg reported success but wrote no output file" if not out.exists()
+                     else "ffmpeg reported success but the output file is empty")
+
+    lines = [ln.strip() for ln in tail if ln.strip()]
+    said = [ln for ln in lines if _ERROR_LINE.search(ln)]
+    if said:
+        parts.append("ffmpeg said: " + " | ".join(said[-3:]))
+    elif lines:
+        parts.append("ffmpeg printed no error. Its last output was:\n" + "\n".join(lines[-4:]))
+    else:
+        parts.append("ffmpeg printed nothing at all")
+    return "\n".join(parts)[-1800:]
+
+
 def render(spec: RenderSpec, on_progress: Callable[[float], None] | None = None,
            should_cancel: Callable[[], bool] | None = None) -> float:
     """Render and return output duration (seconds). Raises EngineError on failure."""
@@ -306,7 +340,7 @@ def render(spec: RenderSpec, on_progress: Callable[[float], None] | None = None,
     def drain():
         for line in proc.stderr:
             tail.append(line)
-            del tail[:-30]
+            del tail[:-80]
 
     t = threading.Thread(target=drain, daemon=True)
     t.start()
@@ -325,5 +359,5 @@ def render(spec: RenderSpec, on_progress: Callable[[float], None] | None = None,
         raise EngineError("Cancelled")
     out = Path(spec.output_path)
     if proc.returncode != 0 or not out.exists() or out.stat().st_size == 0:
-        raise EngineError("".join(tail[-6:]).strip()[-800:] or f"ffmpeg failed ({proc.returncode})")
+        raise EngineError(_failure_message(proc.returncode, tail, out))
     return total
